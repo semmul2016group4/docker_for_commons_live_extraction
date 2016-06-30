@@ -13,9 +13,11 @@ RUN service mysql start && sleep 30s && mysql --protocol=tcp -u root -proot -e "
 COPY dbstructure.sql ./
 # ---- Load SQL file into DB
 RUN service mysql start && sleep 30s && mysql -uroot -proot dbpedia_live_cache < dbstructure.sql
+# ---- Create backup of database datadir
+RUN mkdir mysqlbackup && cp -a /var/lib/mysql/. /mysqlbackup
 
 # Install java
-RUN apt-get install -y default-jdk
+RUN apt-get -y update && apt-get install -y default-jdk
 
 # Setup Extraction Framework
 # -- Install maven
@@ -35,8 +37,8 @@ COPY lastPublishedFile.txt extraction-framework/live/tmp/
 # -- Rename files for commons
 # ---- Rename live.ini
 RUN mv extraction-framework/live/common_config.ini extraction-framework/live/live.ini
-RUN mv extraction-framework/live/common_config.xml extraction-framework/live/live.xml
 # ---- Rename live.xml
+RUN mv extraction-framework/live/common_config.xml extraction-framework/live/live.xml
 
 # Copy file for execution
 COPY run.sh ./
