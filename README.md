@@ -21,9 +21,9 @@ Example
   * /extraction-framework/live/tmp - directory inside container
   * /change_sets - absolute path to directory on host
 
-´´´
+```
 docker run \
   -v /mysql_data_dir:/var/lib/mysql \
   -v /change_sets:/extraction-framework/live/tmp \
   <container name> <command>
-´´´
+ ```
