@@ -16,10 +16,10 @@ In order to access the data created by the extraction framework we recommend to 
 Example
 * MySQL datadir
   * /var/lib/mysql - datadir inside container
-  * ./mysql_data_dir - directory on host
+  * /mysql_data_dir - absolute path to directory on host
 * Triples
   * /extraction-framework/live/tmp - directory inside container
-  * ./change_sets - directory on host
+  * /change_sets - absolute path to directory on host
 
 ´´´
 docker run \

@@ -4,18 +4,6 @@ FROM debian:jessie
 RUN echo mysql-server mysql-server/root_password password root | debconf-set-selections
 RUN echo mysql-server mysql-server/root_password_again password root | debconf-set-selections
 
-# Install & Configure mysql
-# -- Install Client and Server
-RUN apt-get -y update && apt-get install -q -y mysql-server mysql-client
-# -- Start mysql
-RUN service mysql start && sleep 30s && mysql --protocol=tcp -u root -proot -e "CREATE DATABASE dbpedia_live_cache"
-# ---- Copy SQL file to Container
-COPY dbstructure.sql ./
-# ---- Load SQL file into DB
-RUN service mysql start && sleep 30s && mysql -uroot -proot dbpedia_live_cache < dbstructure.sql
-# ---- Create backup of database datadir
-RUN mkdir mysqlbackup && cp -a /var/lib/mysql/. /mysqlbackup
-
 # Install java
 RUN apt-get -y update && apt-get install -y default-jdk
 
@@ -47,6 +35,18 @@ RUN chmod +x ./run.sh
 
 # Expose mysql port
 EXPOSE 3306
+
+# Install & Configure mysql
+# -- Install Client and Server
+RUN apt-get -y update && apt-get install -q -y mysql-server mysql-client
+# -- Start mysql
+RUN service mysql start && sleep 30s && mysql --protocol=tcp -u root -proot -e "CREATE DATABASE dbpedia_live_cache"
+# ---- Copy SQL file to Container
+COPY dbstructure.sql ./
+# ---- Load SQL file into DB
+RUN service mysql start && sleep 30s && mysql -uroot -proot dbpedia_live_cache < dbstructure.sql && mysql -uroot -proot dbpedia_live_cache < extraction-framework/live/src/main/SQL/createTableRCStatistics.sql
+# ---- Create backup of database datadir
+RUN mkdir mysqlbackup && cp -a /var/lib/mysql/. /mysqlbackup
 
 # Execute MYSQL and live extraction framework
 CMD ./run.sh
