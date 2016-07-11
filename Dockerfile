@@ -15,7 +15,7 @@ RUN \
 
 # Setup Extraction Framework
 # -- Install maven
-RUN apt-get install -y maven
+RUN apt-get update && apt-get install -y maven
 # -- Install git
 RUN apt-get install -y git
 # -- create & change to  projectdirectory

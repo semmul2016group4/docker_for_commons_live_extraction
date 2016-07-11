@@ -6,7 +6,6 @@ function handle_trap {
 	kill -n 2 $PID_LIVE
 	sleep 2s
         service mysql stop &
-        echo "XXXXXXXXXXXXX";
         exit 0;
 }
 
@@ -16,7 +15,6 @@ if [ ! "$(ls -A /var/lib/mysql)" ]; then
   cp -a /mysqlbackup/. /var/lib/mysql
 fi
 service mysql start &&
-PID_MYSQL=$!
 cd extraction-framework/live &&\
 ../run live &
 PID_JVM=$!
