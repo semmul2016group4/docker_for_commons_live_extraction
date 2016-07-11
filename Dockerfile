@@ -4,8 +4,14 @@ FROM debian:jessie
 RUN echo mysql-server mysql-server/root_password password root | debconf-set-selections
 RUN echo mysql-server mysql-server/root_password_again password root | debconf-set-selections
 
-# Install java
-RUN apt-get -y update && apt-get install -y default-jdk
+# Install Java.
+RUN \
+	echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee /etc/apt/sources.list.d/webupd8team-java.list && \
+	echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list && \
+	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886 && \
+	apt-get update && \
+	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
+	apt-get install -y oracle-java8-installer
 
 # Setup Extraction Framework
 # -- Install maven
@@ -28,14 +34,6 @@ RUN mv extraction-framework/live/common_config.ini extraction-framework/live/liv
 # ---- Rename live.xml
 RUN mv extraction-framework/live/common_config.xml extraction-framework/live/live.xml
 
-# Copy file for execution
-COPY run.sh ./
-# -- make file executable
-RUN chmod +x ./run.sh
-
-# Expose mysql port
-EXPOSE 3306
-
 # Install & Configure mysql
 # -- Install Client and Server
 RUN apt-get -y update && apt-get install -q -y mysql-server mysql-client
@@ -48,5 +46,13 @@ RUN service mysql start && sleep 30s && mysql -uroot -proot dbpedia_live_cache <
 # ---- Create backup of database datadir
 RUN mkdir mysqlbackup && cp -a /var/lib/mysql/. /mysqlbackup
 
+# Copy file for execution
+COPY run.sh ./
+# -- make file executable
+RUN chmod +x ./run.sh
+
+# Expose mysql port
+EXPOSE 3306
+
 # Execute MYSQL and live extraction framework
-CMD ./run.sh
+CMD ["./run.sh"]
