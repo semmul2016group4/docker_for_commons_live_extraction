@@ -1,6 +1,12 @@
 FROM debian:jessie
 MAINTAINER Magnus Knuth <magnus.knuth@hpi.de>
 
+
+#####################################
+# General system setup.
+#####################################
+
+# Update installed software
 RUN apt-get update
 RUN apt-get upgrade -y
 
@@ -8,60 +14,79 @@ RUN apt-get upgrade -y
 RUN echo "Etc/UTC" > /etc/timezone 
 RUN dpkg-reconfigure -f noninteractive tzdata
 
+
+#####################################
 # Install Java.
-RUN \
-	echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee /etc/apt/sources.list.d/webupd8team-java.list && \
-	echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list && \
-	apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886 && \
-	apt-get update && \
-	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
-	apt-get install -y oracle-java8-installer
+#####################################
 
+# Install default JDK
+RUN apt-get install -y default-jdk
+
+
+#####################################
 # Setup Extraction Framework
-# -- Install maven
-RUN apt-get update && apt-get install -y maven
-# -- Install git
+#####################################
+
+# Install Apache maven
+RUN apt-get install -y maven
+
+# Install git
 RUN apt-get install -y git
-# -- create & change to  projectdirectory
-RUN mkdir /extractionframework && cd /extractionframework
-# -- clone repository
+
+# Clone repository
 RUN git clone -b commons-test https://github.com/semmul2016group4/extraction-framework.git
-# -- change to project root and run maven
-RUN cd extraction-framework && mvn clean install
-# -- create empty pw.txt
-RUN cd extraction-framework/live && touch pw.txt
-# -- copy lastPublishedFile.txt
-ADD lastPublishedFile.txt extraction-framework/live/tmp/
-# -- Rename files for commons
-# ---- Rename live.ini
-RUN mv extraction-framework/live/common_config.ini extraction-framework/live/live.ini
-# ---- Rename live.xml
-RUN mv extraction-framework/live/common_config.xml extraction-framework/live/live.xml
+
+# Change current directory to project root
+WORKDIR extraction-framework
+
+# Install all project dependencies with maven
+RUN mvn clean install
+
+# Change current directory to live module
+WORKDIR live
+
+# Create empty pw.txt
+RUN touch pw.txt
+
+# Create output directory
+RUN mkdir tmp
+
+# Rename files for commons
+# -- Rename live.ini
+RUN mv common_config.ini live.ini
+# -- Rename live.xml
+RUN mv common_config.xml live.xml
 
 
+#####################################
 # Install & Configure mysql
+#####################################
+
 # setup config for mysql DB
 RUN echo mysql-server mysql-server/root_password password root | debconf-set-selections
 RUN echo mysql-server mysql-server/root_password_again password root | debconf-set-selections
-# -- Install Client and Server
-RUN apt-get -q -y mysql-server mysql-client
-# -- Start mysql
+
+# Install Client and Server
+RUN apt-get install -q -y mysql-server mysql-client
+
+# Start mysql and create database
 RUN service mysql start && sleep 30s && mysql --protocol=tcp -u root -proot -e "CREATE DATABASE dbpedia_live_cache"
-# ---- Copy SQL file to Container
+
+# Add SQL file to Container
 ADD dbstructure.sql .
-# ---- Load SQL file into DB
-RUN service mysql start && sleep 30s && mysql -uroot -proot dbpedia_live_cache < dbstructure.sql && mysql -uroot -proot dbpedia_live_cache < extraction-framework/live/src/main/SQL/createTableRCStatistics.sql
-# ---- Create backup of database datadir
+
+# Create tables
+RUN service mysql start && sleep 30s && mysql -uroot -proot dbpedia_live_cache < dbstructure.sql && mysql -uroot -proot dbpedia_live_cache < src/main/SQL/createTableRCStatistics.sql
+
+# Backup database datadir
 RUN mkdir mysqlbackup && cp -a /var/lib/mysql/. /mysqlbackup
 
-# Copy file for execution
-ADD run.sh .
-# -- make file executable
-RUN chmod +x ./run.sh
+# Add file for execution and make it executable
+ADD run.sh /
+RUN chmod +x /run.sh
 
 # Expose mysql port
 EXPOSE 3306
 
-# Execute MYSQL and live extraction framework
-CMD ["./run.sh"]
-
+# Execute mysql and live extraction framework
+CMD ["/run.sh"]
